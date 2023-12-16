@@ -76,7 +76,7 @@ class CurrencyRateController {
     public CurrencyRateController(CurrencyRateView view, CurrencyRateModel model) {
         this.view = view;
         this.model = model;
-        String filePath = "C:\\Users\\tamas\\Documents\\Java\\currency_rates.json"; /* C:/path/to/your/directory/ */
+        String filePath = "C:\\Users\\tamas\\IdeaProjects\\CurrencyRateGraphApp\\src\\currency_rates.json";
         model.readDataFromJSONFile(filePath);
         view.updateGraph();
     }
