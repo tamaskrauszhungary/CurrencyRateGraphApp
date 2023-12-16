@@ -1,8 +1,16 @@
 import javax.swing.*;
 import java.awt.*;
+
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import org.json.JSONObject;
+
 import org.json.*;
 
 public class CurrencyRateGraphApp {
@@ -19,30 +27,61 @@ public class CurrencyRateGraphApp {
 class CurrencyRateModel {
     private double[] rates;
 
-    public void readDataFromJSONFile(String filename) {
-        StringBuilder jsonData = new StringBuilder();
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(filename));
-            String line;
-            while ((line = br.readLine()) != null) {
-                jsonData.append(line);
-            }
-            br.close();
-
-            JSONObject jsonObject = new JSONObject(jsonData.toString());
-            JSONArray ratesArray = jsonObject.getJSONArray("rates");
-            rates = new double[ratesArray.length()];
-
-            for (int i = 0; i < ratesArray.length(); i++) {
-                rates[i] = ratesArray.getDouble(i);
-            }
-        } catch (IOException | JSONException e) {
-            e.printStackTrace();
-        }
+    public void readDataFromJSON() {
+        rates = fetchUSDHUFValues(LocalDate.of(2015, 1, 1), LocalDate.of(2016, 1, 1));
     }
 
     public double[] getRates() {
         return rates;
+    }
+
+    public static double[] fetchUSDHUFValues(LocalDate startDate, LocalDate endDate) {
+        List<Double> usdHufList = new ArrayList<>();
+
+        try {
+            String urlString = buildURL(startDate, endDate);
+            URL url = new URL(urlString);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+
+            BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            String inputLine;
+            StringBuilder response = new StringBuilder();
+            while ((inputLine = in.readLine()) != null) {
+                response.append(inputLine);
+            }
+            in.close();
+
+            JSONObject responseData = new JSONObject(response.toString());
+            JSONObject quotes = responseData.getJSONObject("quotes");
+
+            LocalDate currentDate = startDate;
+            while (!currentDate.isAfter(endDate)) {
+                String formattedDate = currentDate.toString();
+                if (quotes.has(formattedDate)) {
+                    JSONObject currencyData = quotes.getJSONObject(formattedDate);
+                    if (currencyData.has("USDHUF")) {
+                        usdHufList.add(currencyData.getDouble("USDHUF"));
+                    }
+                }
+                currentDate = currentDate.plusDays(1);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+
+        double[] usdHufArray = new double[usdHufList.size()];
+        for (int i = 0; i < usdHufList.size(); i++) {
+            usdHufArray[i] = usdHufList.get(i);
+        }
+        return usdHufArray;
+    }
+
+    private static String buildURL(LocalDate startDate, LocalDate endDate) {
+        return "http://api.currencylayer.com/timeframe?start_date=" + startDate +
+                "&end_date=" + endDate + "&currencies=HUF&source=USD&access_key=356e06cecfcfb88b593c6734b7f6e11b";
     }
 }
 
@@ -77,7 +116,7 @@ class CurrencyRateController {
         this.view = view;
         this.model = model;
         String filePath = "C:\\Users\\tamas\\IdeaProjects\\CurrencyRateGraphApp\\src\\currency_rates.json";
-        model.readDataFromJSONFile(filePath);
+        model.readDataFromJSON();
         view.updateGraph();
     }
 }
