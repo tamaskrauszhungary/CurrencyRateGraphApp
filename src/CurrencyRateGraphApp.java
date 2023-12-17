@@ -11,8 +11,6 @@ import java.util.ArrayList;
 import java.util.List;
 import org.json.JSONObject;
 
-import org.json.*;
-
 public class CurrencyRateGraphApp {
 
     public static void main(String[] args) {
@@ -39,7 +37,8 @@ class CurrencyRateModel {
         List<Double> usdHufList = new ArrayList<>();
 
         try {
-            String urlString = buildURL(startDate, endDate);
+            String accessKey = "356e06cecfcfb88b593c6734b7f6e11b";
+            String urlString = buildURL(startDate, endDate, accessKey);
             URL url = new URL(urlString);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
@@ -79,9 +78,9 @@ class CurrencyRateModel {
         return usdHufArray;
     }
 
-    private static String buildURL(LocalDate startDate, LocalDate endDate) {
+    private static String buildURL(LocalDate startDate, LocalDate endDate, String accessKey) {
         return "http://api.currencylayer.com/timeframe?start_date=" + startDate +
-                "&end_date=" + endDate + "&currencies=HUF&source=USD&access_key=356e06cecfcfb88b593c6734b7f6e11b";
+                "&end_date=" + endDate + "&currencies=HUF&source=USD&access_key=" + accessKey;
     }
 }
 
@@ -99,12 +98,29 @@ class CurrencyRateView {
 
         graphPanel = new GraphPanel();
         frame.add(graphPanel, BorderLayout.CENTER);
+
+        JButton showRatingsButton = new JButton("Show Ratings");
+        showRatingsButton.addActionListener(e -> showRatings());
+        frame.add(showRatingsButton, BorderLayout.SOUTH);
+
         frame.setVisible(true);
     }
 
     public void updateGraph() {
         graphPanel.setRates(model.getRates());
         graphPanel.repaint();
+    }
+
+    private void showRatings() {
+        if (model.getRates() != null && model.getRates().length > 0) {
+            StringBuilder ratings = new StringBuilder("Ratings:\n");
+            for (double rate : model.getRates()) {
+                ratings.append(rate).append("\n");
+            }
+            JOptionPane.showMessageDialog(frame, ratings.toString(), "Ratings", JOptionPane.PLAIN_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(frame, "No ratings available.", "Ratings", JOptionPane.INFORMATION_MESSAGE);
+        }
     }
 }
 
@@ -115,7 +131,6 @@ class CurrencyRateController {
     public CurrencyRateController(CurrencyRateView view, CurrencyRateModel model) {
         this.view = view;
         this.model = model;
-        String filePath = "C:\\Users\\tamas\\IdeaProjects\\CurrencyRateGraphApp\\src\\currency_rates.json";
         model.readDataFromJSON();
         view.updateGraph();
     }
